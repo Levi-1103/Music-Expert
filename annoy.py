@@ -39,7 +39,7 @@ class MyClient(discord.Client):
         channel = self.get_channel(int(os.getenv('CHANNEL_ID')))  # channel ID goes here
         if isinstance(self.target.activity, discord.Spotify):
             if self.target.activity.artist != self.current_song:
-                await channel.send(f"imagine listening to {self.target.activity.artist} cringe")
+                await channel.send(f"{self.target.mention} imagine listening to {self.target.activity.artist} cringe")
                 self.current_song = self.target.activity.artist
 
     @my_background_task.before_loop
