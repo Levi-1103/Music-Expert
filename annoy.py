@@ -10,11 +10,9 @@ class MyClient(discord.Client):
     def __init__(self, *args, **kwargs, ):
         super().__init__(*args, **kwargs)
 
-        # an attribute we can access from our task
-        self.userID = int(os.getenv('USER_ID'))
+        self.target_name = ""
         self.members = None
         self.target = None
-        self.channel = None
         self.current_song = ""
 
     async def setup_hook(self) -> None:
@@ -23,28 +21,49 @@ class MyClient(discord.Client):
 
     async def on_ready(self):
         self.members = self.get_all_members()
-
-        for member in self.members:
-            print(f"Target: {member.display_name}")
-            if member.id == self.userID:
-                self.target = member
-
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
-        print(self.target.name)
-        
 
-    @tasks.loop(seconds=1)  # task runs every 60 seconds
+    
+    async def on_message(self, message):
+        if isinstance(message.channel, discord.DMChannel):
+            if message.content.startswith('target'):
+                channel = message.channel
+                await channel.send('Enter the target Name')
+
+                # def check(m):
+                #     print("CHECK")
+                #     return # m.channel == channel and (len(m.content) == 17 or len(m.content) == 18)
+
+                msg = await client.wait_for('message')
+
+                for member in self.members:
+                    if member.name == msg.content:
+                        self.target_name = member.name
+                        self.target = member
+
+                await channel.send(f'Target Acquired {self.target.name}')
+
+    @tasks.loop(seconds=1)
     async def my_background_task(self):
-        channel = self.get_channel(int(os.getenv('CHANNEL_ID')))  # channel ID goes here
-        if isinstance(self.target.activity, discord.Spotify):
-            if self.target.activity.artist != self.current_song:
-                await channel.send(f"{self.target.mention} imagine listening to {self.target.activity.artist} cringe")
-                self.current_song = self.target.activity.artist
+        if self.target is None:
+            print("NO TARGET")
+            return
+        else:
+            # print(self.target.activities)
+            channel = self.get_channel(int(os.getenv('CHANNEL_ID')))
+            
+            if isinstance(self.target.activities[1], discord.Spotify):
+                activity = self.target.activities[1]
+                if activity.artist != self.current_song:
+                    await channel.send(f"{self.target.mention} imagine listening to {activity.artist} cringe")
+                    self.current_song = activity.artist
+
+        
 
     @my_background_task.before_loop
     async def before_my_task(self):
-        await self.wait_until_ready()  # wait until the bot logs in
+        await self.wait_until_ready()
 
 
 client = MyClient(intents=discord.Intents.all())
